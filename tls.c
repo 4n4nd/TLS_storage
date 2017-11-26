@@ -8,6 +8,8 @@
 #include <sys/mman.h>
 
 #define MAX_THREADS 256
+#define TRUE 1
+#define FALSE 0
 int tls_count = 0;
 pthread_t current_thread_id;
 int page_size = getpagesize();
@@ -22,6 +24,7 @@ struct tls_storage
 	pthread_t thread_id;
 	unsigned int tls_size;
 	unsigned int num_pages;
+	int destroyed = TRUE;
 
 };
 
@@ -32,10 +35,14 @@ int find_tls(pthread_t look_up_id){
 	{
 		if (tls_storage_array[i].thread_id == look_up_id)
 		{
-			return i;
+			if (tls_storage_array[i].destroyed)
+			{
+				return 0;
+			}
+			return i; // returns the tls_storage_array index if found
 		}
 	}
-	return 0;
+	return 0;	//returns 0 if no tls found
 }
 
 int tls_create(unsigned int size){
@@ -51,12 +58,13 @@ int tls_create(unsigned int size){
 	}
 	if (tls_count == 0)
 	{
-
+		//initialize the SIGSEGV handler
 		
 	}
+
 	tls_storage_array[tls_count].thread_id = current_thread_id;
 	tls_storage_array[tls_count].tls_size = size;
-
+	tls_storage_array[tls_count].destroyed = FALSE;
 	tls_count++;
 	return 0;
 }
@@ -64,4 +72,7 @@ int tls_create(unsigned int size){
 int tls_write(unsigned int offset, unsigned int length, char
 *buffer){
 	return 0;
+}
+int tls_destroy(){
+	find_tls(pthread_self())
 }
